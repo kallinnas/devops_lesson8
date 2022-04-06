@@ -1,25 +1,23 @@
-node{
-   stage('SCM Checkout'){
-       git credentialsId: 'git-creds', url: 'https://github.com/javahometech/my-app'
-   }
-   stage('Mvn Package'){
-     def mvnHome = tool name: 'maven-3', type: 'maven'
-     def mvnCMD = "${mvnHome}/bin/mvn"
-     sh "${mvnCMD} clean package"
-   }
-   stage('Build Docker Image'){
-     sh 'docker build -t kammana/my-app:2.0.0 .'
-   }
-   stage('Push Docker Image'){
-     withCredentials([string(credentialsId: 'docker-pwd', variable: 'dockerHubPwd')]) {
-        sh "docker login -u kammana -p ${dockerHubPwd}"
-     }
-     sh 'docker push kammana/my-app:2.0.0'
-   }
-   stage('Run Container on Dev Server'){
-     def dockerRun = 'docker run -p 8080:8080 -d --name my-app kammana/my-app:2.0.0'
-     sshagent(['dev-server']) {
-       sh "ssh -o StrictHostKeyChecking=no ec2-user@172.31.18.198 ${dockerRun}"
-     }
-   }
+node {
+    stage('Checkout'){
+        git branch: 'main', url: 'https://github.com/AMBarodzich/lesson8'
+    }
+    stage('Maven Package'){
+        sh 'mvn clean package'
+    }
+    stage('Docker Build Image'){
+        sh 'docker build -t ambarodzich/docker-app:1.0 .'
+    }
+    stage('Docker Push'){
+        withCredentials([string(credentialsId: 'DockerHubPwd', variable: 'DockerHubPwd')]) {
+            sh "docker login -u ambarodzich -p ${DockerHubPwd}"
+        } 
+        sh 'docker push ambarodzich/docker-app:1.0'
+    }
+    stage('Run container'){
+        def dockerRun = 'docker run -p 8080:8080 -d --name my-app ambarodzich/docker-app:1.0'
+        sshagent(['new_ubuntu']) {
+            sh "ssh -o StrictHostKeyChecking=no jenkins@172.31.13.176 ${dockerRun}"
+        }
+    }
 }
