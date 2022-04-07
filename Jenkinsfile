@@ -15,7 +15,7 @@ node {
         sh 'docker push ambarodzich/docker-app:1.0'
     }
     stage('Run container'){
-        def dockerRun = 'docker run -p 8080:8080 -d --name my-app ambarodzich/docker-app:1.0'
+        def dockerRun = 'docker run -p 8080:8080 -d --name docker-app ambarodzich/docker-app:1.0'
         sshagent(['new_ubuntu']) {
             sh "ssh -o StrictHostKeyChecking=no jenkins@172.31.13.176 ${dockerRun}"
         }
