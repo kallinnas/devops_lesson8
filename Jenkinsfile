@@ -1,23 +1,38 @@
-node {
-    stage('Checkout') {
-        git branch: 'main', url: 'https://github.com/AMBarodzich/lesson8'
-    }
-    stage('Maven Package') {
-        sh 'mvn clean package'
-    }
-    stage('Docker Build Image') {
-        sh 'docker build -t ambarodzich/docker-app:2.0 .'
-    }
-    stage('Docker Push') {
-        withCredentials([string(credentialsId: 'DockerHubPwd', variable: 'DockerHubPWD')]) {
-            sh "docker login -u ambarodzich -p ${DockerHubPWD}"
+def dockerRun = "docker run -d -p 8081:8080 ambarodzich/docker-app:v2"
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/AMBarodzich/lesson8']])    
+            }
         }
-        sh "docker push ambarodzich/docker-app:2.0"
-    }
-    stage('Deploy') {
-        def dockerRun = "docker run -d -p 8080:8080 ambarodzich/docker-app:2.0"
-        sshagent(['new_ubuntu']) {
-            sh "ssh -o StrictHostKeyChecking=no ubuntu@172.31.84.174 ${dockerRun}"
-        }       
+        stage('Maven-build') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+        stage('Docker Build') {
+            steps {
+                sh 'docker build -t ambarodzich/docker-app:v2 .'
+            }
+        }
+        stage('Docker Push') {
+            steps {
+                withCredentials([string(credentialsId: 'DockerHubPWD', variable: 'DockerHubPWD')]) {
+                    sh "docker login -u ambarodzich -p ${DockerHubPWD}"
+                }
+                sh "docker push ambarodzich/docker-app:v2"
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sshagent(['ubuntu']) {
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@172.31.50.123 ${dockerRun}"
+                }    
+            }
+        }
     }
 }
