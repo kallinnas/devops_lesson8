@@ -30,7 +30,7 @@ pipeline {
         stage('Deploy') {
             steps {
                 sshagent(['ubuntu']) {
-                    sh "ssh -o StrictHostKeyChecking=no ubuntu@172.31.50.123 ${dockerRun}"
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@172.31.21.117 ${dockerRun}"
                 }    
             }
         }
