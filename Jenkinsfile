@@ -1,37 +1,38 @@
-def dockerRun = "docker run -d -p 8081:8080 ambarodzich/docker-app:v2"
+def dockerRun = "docker run -d -p 8081:8080 ambarodzich/docker-app:'$BUILD_NUMBER'"
 
 pipeline {
+    
     agent any
-
+    
     stages {
         stage('Checkout') {
             steps {
-                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/AMBarodzich/lesson8']])    
+                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/AMBarodzich/lesson8']])
             }
         }
-        stage('Maven-build') {
+        stage('Build') {
             steps {
                 sh 'mvn clean package'
             }
         }
-        stage('Docker Build') {
+        stage('Docker_build') {
             steps {
-                sh 'docker build -t ambarodzich/docker-app:v2 .'
+                sh 'docker build -t ambarodzich/docker-app:"$BUILD_NUMBER" .'
             }
         }
-        stage('Docker Push') {
+        stage('Docker_push') {
             steps {
                 withCredentials([string(credentialsId: 'DockerHubPwd', variable: 'DockerHubPwd')]) {
-                    sh "docker login -u ambarodzich -p ${DockerHubPwd}"
+                   sh 'docker login -u ambarodzich -p ${DockerHubPwd}'
                 }
-                sh "docker push ambarodzich/docker-app:v2"
+                sh 'docker push ambarodzich/docker-app:"$BUILD_NUMBER"'
             }
         }
         stage('Deploy') {
             steps {
-                sshagent(['ssh-agent']) {
-                    sh "ssh -o StrictHostKeyChecking=no ubuntu@172.31.21.117 ${dockerRun}"
-                }    
+                sshagent(['jenkins']) {
+                    sh "ssh -o StrictHostKeyChecking=no jenkins@172.31.36.96 ${dockerRun}"
+                }
             }
         }
     }
