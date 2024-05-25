@@ -1,38 +1,43 @@
-def dockerRun = "docker run -d -p 8081:8080 ambarodzich/docker-app:'$BUILD_NUMBER'"
-
 pipeline {
-    agent any
+	agent any
 
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/AMBarodzich/lesson8.git']])
-            }
-        }
-        stage('build') {
+	stages {
+		stage('CheckOut') {
+			steps {
+				checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/kallinnas/devops_lesson8']])
+			}
+		}
+		
+		stage('Maven-build') {
             steps {
                 sh 'mvn clean package'
             }
         }
-        stage('docker_build') {
+        
+        stage('Docker Build') {
             steps {
-                sh 'docker build -t ambarodzich/docker-app:"$BUILD_NUMBER" .'
+		        sh 'docker build -t kallinnas/jenkins-docker-app:v1 .'
             }
         }
-        stage('docker_push') {
+        
+        stage('Docker Push') {
             steps {
-                withCredentials([string(credentialsId: 'DockerHubPwd', variable: 'DockerHubPwd')]) {
-                   sh 'docker login -u ambarodzich -p ${DockerHubPwd}' 
+		        withCredentials([string(credentialsId: 'DockerHubCredentials', variable: 'DockerHubCredentials')]) {
+			        sh "docker login -u kallinnas -p ${DockerHubCredentials}"
+		        }
+		        sh "docker push kallinnas/jenkins-docker-app:v1"
+            }
+        }
+        
+        stage('Docker Deploy') {
+            steps {
+                script {
+                    def dockerRun = "docker run -d -p 8080:8080 kallinnas/jenkins-docker-app:v1"
+                    sshagent(['ubuntu']) {
+                        sh "ssh -o StrictHostKeyChecking=no ubuntu@172.31.19.184 ${dockerRun}"
+                    }
                 }
-                sh 'docker push ambarodzich/docker-app:"$BUILD_NUMBER"'
             }
         }
-        stage('docker_deploy') {
-            steps {
-                sshagent(['b5960653-0f8b-4bd5-a706-768517b79d23']) {
-                    sh  "ssh -o StrictHostkeyChecking=no ubuntu@172.31.19.170 ${dockerRun}"  
-                }
-            }
-        }
-    }
-}    
+	}
+}
